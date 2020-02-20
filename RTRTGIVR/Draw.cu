@@ -16,7 +16,8 @@ extern "C" __global__ void __raygen__RayAllocator()
 	float3 color = make_float3(0);
 
 	float2 ahh = /*random(index, paras.size, 0) +*/
-		make_float2(index) - make_float2(paras.size) / 2.0f;
+		make_float2(index) - make_float2(paras.size) / 2.0f +
+		make_float2(paras.trans->blank0, paras.trans->blank1);
 	float3 d = normalize(make_float3(ahh, paras.trans->z0));
 	float3 dd = make_float3(
 		dot(paras.trans->row0, d),
