@@ -62,7 +62,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <NvccCompilation>ptx</NvccCompilation>
       <GPUDebugInfo>false</GPUDebugInfo>
-      <CodeGeneration>compute_61,sm_61</CodeGeneration>
+      <CodeGeneration>compute_75,sm_75</CodeGeneration>
       <CompileOut>ptx\%(Filename).ptx</CompileOut>
     </CudaCompile>
   </ItemDefinitionGroup>
@@ -85,15 +85,27 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <NvccCompilation>ptx</NvccCompilation>
-      <CodeGeneration>compute_61,sm_61</CodeGeneration>
+      <CodeGeneration>compute_75,sm_75</CodeGeneration>
       <CompileOut>ptx\%(Filename).ptx</CompileOut>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="Draw.cu" />
+    <CudaCompile Include="CudaAcc.cu">
+      <CompileOut Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)%(Filename)%(Extension).obj</CompileOut>
+      <NvccCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">compile</NvccCompilation>
+      <CompileOut Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)%(Filename)%(Extension).obj</CompileOut>
+      <NvccCompilation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compile</NvccCompilation>
+      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">compute_75,sm_75</CodeGeneration>
+      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compute_75,sm_75</CodeGeneration>
+    </CudaCompile>
+    <CudaCompile Include="Draw.cu">
+      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">compute_75,sm_75</CodeGeneration>
+      <CodeGeneration Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compute_75,sm_75</CodeGeneration>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\include\OptiX\_OptiX_7.h" />
+    <ClInclude Include="..\..\..\include\_BMP.h" />
     <ClInclude Include="Define.h" />
   </ItemGroup>
   <ItemGroup>

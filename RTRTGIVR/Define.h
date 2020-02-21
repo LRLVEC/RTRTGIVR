@@ -21,6 +21,11 @@ struct RayData
 {
 	float r, g, b;
 };
+struct RayTraceData
+{
+	float3 answer;
+	unsigned int depth;
+};
 struct CloseHitData
 {
 	float3* normals;
@@ -31,4 +36,7 @@ struct Parameters
 	OptixTraversableHandle handle;
 	TransInfo* trans;
 	uint2 size;
+	cudaTextureObject_t cubeTexture;
+	curandState* randState;
+	unsigned int depthMax;
 };

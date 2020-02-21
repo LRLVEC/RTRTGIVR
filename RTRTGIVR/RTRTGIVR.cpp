@@ -9,6 +9,9 @@
 #include "Define.h"
 #include <_Time.h>
 #include <_STL.h>
+#include <_BMP.h>
+
+void initRandom(curandState* state, int seed, unsigned int block, unsigned int grid, unsigned int MaxNum);
 
 namespace CUDA
 {
@@ -24,6 +27,7 @@ namespace CUDA
 			Program rayAllocator;
 			Program miss;
 			Program closestHit;
+			unsigned int depthMax;
 			OptixPipelineLinkOptions pipelineLinkOptions;
 			Pipeline pip;
 			SbtRecord<RayData> raygenData;
@@ -44,6 +48,12 @@ namespace CUDA
 			OptixAccelBuildOptions accelOptions;
 			Buffer GASOutput;
 			OptixTraversableHandle GASHandle;
+			cudaArray* cuArray;
+			cudaTextureObject_t tex;
+			cudaResourceDesc texRes;
+			cudaTextureDesc texDescr;
+			CubeMap sky;
+
 			PathTracing(OpenGL::SourceManager* _sourceManager, OpenGL::OptiXRenderer* dr, OpenGL::FrameScale const& _size, void* transInfoDevice)
 				:
 				context(),
@@ -53,13 +63,14 @@ namespace CUDA
 				OPTIX_COMPILE_DEBUG_LEVEL_NONE },
 				pipelineCompileOptions{ false,
 				OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_LEVEL_INSTANCING,
-				3,2,OPTIX_EXCEPTION_FLAG_NONE,"paras" },
+				8/*payload nums*/,2,OPTIX_EXCEPTION_FLAG_NONE,"paras" },
 				mm(&_sourceManager->folder, context, &moduleCompileOptions, &pipelineCompileOptions),
 				programGroupOptions{},
 				rayAllocator(Vector<String<char>>("__raygen__RayAllocator"), Program::RayGen, &programGroupOptions, context, &mm),
 				miss(Vector<String<char>>("__miss__Ahh"), Program::Miss, &programGroupOptions, context, &mm),
 				closestHit(Vector<String<char>>("__closesthit__Ahh"), Program::HitGroup, &programGroupOptions, context, &mm),
-				pipelineLinkOptions{ 2,OPTIX_COMPILE_DEBUG_LEVEL_NONE,false },
+				depthMax(3),
+				pipelineLinkOptions{ depthMax,OPTIX_COMPILE_DEBUG_LEVEL_NONE,false },
 				pip(context, &pipelineCompileOptions, &pipelineLinkOptions, { rayAllocator ,closestHit, miss }),
 				raygenDataBuffer(raygenData, false),
 				missDataBuffer(missData, false),
@@ -67,22 +78,41 @@ namespace CUDA
 				sbt(),
 				frameBuffer(*dr),
 				parasBuffer(paras, false),
-				box(_sourceManager->folder.find("resources/teapot.stl").readSTL()),
+				box(_sourceManager->folder.find("resources/box.stl").readSTL()),
 				vertices(Buffer::Device),
 				normals(Buffer::Device),
 				triangleBuildInput({}),
 				accelOptions({}),
-				GASOutput(Buffer::Device)
+				GASOutput(Buffer::Device),
+				sky("resources/skybox/")
 			{
 				box.getVerticesRepeated();
 				box.getNormals();
 				box.printInfo(false);
+
+				cudaChannelFormatDesc channelDesc{ 8, 8, 8, 8, cudaChannelFormatKindUnsigned };
+				cudaExtent extent{ sky.width, sky.width, 6 };
+				cudaMalloc3DArray(&cuArray, &channelDesc, extent, cudaArrayCubemap);
+				sky.moveToGPU(cuArray);
+				//cudaMemcpyToArray(cuArray, 0, 0, bmpdata, bmpsize, cudaMemcpyHostToDevice);//only for dim<3
+				memset(&texRes, 0, sizeof(cudaResourceDesc));
+				memset(&texDescr, 0, sizeof(cudaTextureDesc));
+				texRes.resType = cudaResourceTypeArray;
+				texRes.res.array.array = cuArray;
+				texDescr.normalizedCoords = true;
+				texDescr.filterMode = cudaFilterModePoint;
+				texDescr.addressMode[0] = cudaAddressModeWrap;
+				texDescr.addressMode[1] = cudaAddressModeWrap;
+				texDescr.addressMode[2] = cudaAddressModeWrap;
+				texDescr.readMode = cudaReadModeNormalizedFloat;
+				cudaCreateTextureObject(&tex, &texRes, &texDescr, NULL);
+				paras.cubeTexture = tex;
+
 				vertices.copy(box.verticesRepeated.data, sizeof(Math::vec3<float>)* box.verticesRepeated.length);
 				normals.copy(box.normals.data, sizeof(Math::vec3<float>)* box.normals.length);
-				uint32_t triangle_input_flags[1] =  // One per SBT record for this build input
-				{
-					OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT
-				};
+
+				// One per SBT record for this build input
+				uint32_t triangle_input_flags[1] = { OPTIX_GEOMETRY_FLAG_DISABLE_ANYHIT };
 
 				triangleBuildInput.type = OPTIX_BUILD_INPUT_TYPE_TRIANGLES;
 				triangleBuildInput.triangleArray.vertexFormat = OPTIX_VERTEX_FORMAT_FLOAT3;
@@ -128,6 +158,13 @@ namespace CUDA
 				else GASOutput.copy(compation);
 				paras.handle = GASHandle;
 				paras.trans = (TransInfo*)transInfoDevice;
+
+				srand(time(nullptr));
+				cudaMalloc(&paras.randState, _size.w* _size.h * sizeof(curandState));
+				initRandom(paras.randState, rand(), 1024, (_size.w* _size.h + 1023) / 1024, _size.w* _size.h);
+
+				paras.depthMax = depthMax;
+
 				/*OptixStackSizes stackSizes = { 0 };
 				optixUtilAccumulateStackSizes(programGroups[0], &stackSizes);
 
@@ -182,6 +219,12 @@ namespace CUDA
 				parasBuffer.copy(paras);
 				frameBuffer.unmap();
 			}
+			void terminate()
+			{
+				cudaDestroyTextureObject(tex);
+				cudaFreeArray(cuArray);
+				cudaFree(paras.randState);
+			}
 		};
 	}
 }
@@ -200,11 +243,15 @@ namespace OpenGL
 			RTRTGIVR()
 				:
 				sm(),
-				hmd(true),
+				hmd(false),
 				trans(&hmd, { 0.01,10 }),
 				renderer(&sm, hmd.frameScale, &hmd),
 				pathTracer(&sm, &renderer, hmd.frameScale, trans.buffer.device)
 			{
+			}
+			~RTRTGIVR()
+			{
+				pathTracer.terminate();
 			}
 			virtual void init(FrameScale const& _size)override
 			{
@@ -272,7 +319,7 @@ int main()
 	{
 		"RTRTGIVR",
 		{
-			{1080*2,1200},
+			{1080 * 2,1200},
 			true,false
 		}
 	};
