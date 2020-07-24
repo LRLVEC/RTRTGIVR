@@ -62,15 +62,16 @@ namespace CUDA
 				OPTIX_COMPILE_OPTIMIZATION_DEFAULT,
 				OPTIX_COMPILE_DEBUG_LEVEL_NONE },
 				pipelineCompileOptions{ false,
-				OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_LEVEL_INSTANCING,
-				8/*payload nums*/,2,OPTIX_EXCEPTION_FLAG_NONE,"paras" },
+				OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_GAS,
+				8/*payload nums*/,2,OPTIX_EXCEPTION_FLAG_NONE,"paras",
+				unsigned int(OPTIX_PRIMITIVE_TYPE_FLAGS_TRIANGLE) },
 				mm(&_sourceManager->folder, context, &moduleCompileOptions, &pipelineCompileOptions),
 				programGroupOptions{},
 				rayAllocator(Vector<String<char>>("__raygen__RayAllocator"), Program::RayGen, &programGroupOptions, context, &mm),
 				miss(Vector<String<char>>("__miss__Ahh"), Program::Miss, &programGroupOptions, context, &mm),
 				closestHit(Vector<String<char>>("__closesthit__Ahh"), Program::HitGroup, &programGroupOptions, context, &mm),
 				depthMax(3),
-				pipelineLinkOptions{ depthMax,OPTIX_COMPILE_DEBUG_LEVEL_NONE,false },
+				pipelineLinkOptions{ depthMax,OPTIX_COMPILE_DEBUG_LEVEL_NONE},
 				pip(context, &pipelineCompileOptions, &pipelineLinkOptions, { rayAllocator ,closestHit, miss }),
 				raygenDataBuffer(raygenData, false),
 				missDataBuffer(missData, false),
@@ -124,6 +125,7 @@ namespace CUDA
 				triangleBuildInput.triangleArray.sbtIndexOffsetBuffer = 0;
 				triangleBuildInput.triangleArray.sbtIndexOffsetSizeInBytes = 0;
 				triangleBuildInput.triangleArray.sbtIndexOffsetStrideInBytes = 0;
+				triangleBuildInput.triangleArray.transformFormat = OPTIX_TRANSFORM_FORMAT_NONE;
 
 				accelOptions.buildFlags = OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
 				accelOptions.operation = OPTIX_BUILD_OPERATION_BUILD;
