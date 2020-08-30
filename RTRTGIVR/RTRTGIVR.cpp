@@ -48,11 +48,10 @@ namespace CUDA
 			OptixAccelBuildOptions accelOptions;
 			Buffer GASOutput;
 			OptixTraversableHandle GASHandle;
-			cudaArray* cuArray;
-			cudaTextureObject_t tex;
-			cudaResourceDesc texRes;
-			cudaTextureDesc texDescr;
 			CubeMap sky;
+			TextureCube texCube;
+			OptixDenoiserOptions denoiserOptions;
+			//Denoiser denoiser;
 
 			PathTracing(OpenGL::SourceManager* _sourceManager, OpenGL::OptiXRenderer* dr, OpenGL::FrameScale const& _size, void* transInfoDevice)
 				:
@@ -71,7 +70,7 @@ namespace CUDA
 				miss(Vector<String<char>>("__miss__Ahh"), Program::Miss, &programGroupOptions, context, &mm),
 				closestHit(Vector<String<char>>("__closesthit__Ahh"), Program::HitGroup, &programGroupOptions, context, &mm),
 				depthMax(3),
-				pipelineLinkOptions{ depthMax,OPTIX_COMPILE_DEBUG_LEVEL_NONE},
+				pipelineLinkOptions{ depthMax,OPTIX_COMPILE_DEBUG_LEVEL_NONE },
 				pip(context, &pipelineCompileOptions, &pipelineLinkOptions, { rayAllocator ,closestHit, miss }),
 				raygenDataBuffer(raygenData, false),
 				missDataBuffer(missData, false),
@@ -85,29 +84,16 @@ namespace CUDA
 				triangleBuildInput({}),
 				accelOptions({}),
 				GASOutput(Buffer::Device),
-				sky("resources/skybox/")
+				sky("resources/skybox/"),
+				texCube({ 8, 8, 8, 8, cudaChannelFormatKindUnsigned },cudaFilterModePoint,cudaReadModeNormalizedFloat,true, sky),
+				denoiserOptions{ OPTIX_DENOISER_INPUT_RGB }
+				//denoiser(context, &denoiserOptions, OPTIX_DENOISER_MODEL_KIND_LDR, _size)
 			{
 				box.getVerticesRepeated();
 				box.getNormals();
 				box.printInfo(false);
 
-				cudaChannelFormatDesc channelDesc{ 8, 8, 8, 8, cudaChannelFormatKindUnsigned };
-				cudaExtent extent{ sky.width, sky.width, 6 };
-				cudaMalloc3DArray(&cuArray, &channelDesc, extent, cudaArrayCubemap);
-				sky.moveToGPU(cuArray);
-				//cudaMemcpyToArray(cuArray, 0, 0, bmpdata, bmpsize, cudaMemcpyHostToDevice);//only for dim<3
-				memset(&texRes, 0, sizeof(cudaResourceDesc));
-				memset(&texDescr, 0, sizeof(cudaTextureDesc));
-				texRes.resType = cudaResourceTypeArray;
-				texRes.res.array.array = cuArray;
-				texDescr.normalizedCoords = true;
-				texDescr.filterMode = cudaFilterModePoint;
-				texDescr.addressMode[0] = cudaAddressModeWrap;
-				texDescr.addressMode[1] = cudaAddressModeWrap;
-				texDescr.addressMode[2] = cudaAddressModeWrap;
-				texDescr.readMode = cudaReadModeNormalizedFloat;
-				cudaCreateTextureObject(&tex, &texRes, &texDescr, NULL);
-				paras.cubeTexture = tex;
+				paras.cubeTexture = texCube;
 
 				vertices.copy(box.verticesRepeated.data, sizeof(Math::vec3<float>)* box.verticesRepeated.length);
 				normals.copy(box.normals.data, sizeof(Math::vec3<float>)* box.normals.length);
@@ -204,6 +190,8 @@ namespace CUDA
 				sbt.hitgroupRecordCount = 1;
 
 				cudaStreamCreate(&cuStream);
+				//denoiser.setup(cuStream);
+
 			}
 			virtual void run()
 			{
@@ -223,8 +211,6 @@ namespace CUDA
 			}
 			void terminate()
 			{
-				cudaDestroyTextureObject(tex);
-				cudaFreeArray(cuArray);
 				cudaFree(paras.randState);
 			}
 		};
@@ -295,22 +281,20 @@ namespace OpenGL
 				{
 					switch (_key)
 					{
-						case GLFW_KEY_ESCAPE:if (_action == GLFW_PRESS)
-							glfwSetWindowShouldClose(_window, true); break;
-							//case GLFW_KEY_A:trans.key.refresh(0, _action); break;
-							//case GLFW_KEY_D:trans.key.refresh(1, _action); break;
-							//case GLFW_KEY_W:trans.key.refresh(2, _action); break;
-							//case GLFW_KEY_S:trans.key.refresh(3, _action); break;
-							/*	case GLFW_KEY_UP:monteCarlo.trans.persp.increaseV(0.02); break;
-								case GLFW_KEY_DOWN:monteCarlo.trans.persp.increaseV(-0.02); break;
-								case GLFW_KEY_RIGHT:monteCarlo.trans.persp.increaseD(0.01); break;
-								case GLFW_KEY_LEFT:monteCarlo.trans.persp.increaseD(-0.01); break;*/
+					case GLFW_KEY_ESCAPE:if (_action == GLFW_PRESS)
+						glfwSetWindowShouldClose(_window, true); break;
+						//case GLFW_KEY_A:trans.key.refresh(0, _action); break;
+						//case GLFW_KEY_D:trans.key.refresh(1, _action); break;
+						//case GLFW_KEY_W:trans.key.refresh(2, _action); break;
+						//case GLFW_KEY_S:trans.key.refresh(3, _action); break;
+						/*	case GLFW_KEY_UP:monteCarlo.trans.persp.increaseV(0.02); break;
+							case GLFW_KEY_DOWN:monteCarlo.trans.persp.increaseV(-0.02); break;
+							case GLFW_KEY_RIGHT:monteCarlo.trans.persp.increaseD(0.01); break;
+							case GLFW_KEY_LEFT:monteCarlo.trans.persp.increaseD(-0.01); break;*/
 					}
 				}
 			}
 		};
-
-
 	}
 }
 

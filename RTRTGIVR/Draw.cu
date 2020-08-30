@@ -16,7 +16,7 @@ extern "C" __global__ void __raygen__RayAllocator()
 	getCurandState(&state, statePtr);
 
 	RayData* rtData = (RayData*)optixGetSbtDataPointer();
-	RayTraceData answer = { {0.f,0.f,0.f},1 };
+	RayTraceData answer = { {0.f,0.f,0.f},0 };
 
 	float2 ahh = /*random(index, paras.size, 0) +*/
 		make_float2(index) - make_float2(paras.size) / 2.0f +
@@ -60,7 +60,7 @@ extern "C" __global__ void __closesthit__Ahh()
 		float3 hitPoint(optixGetWorldRayOrigin() + rayDir * optixGetRayTmax());
 		float cosi1 = dot(rayDir, n);
 		if (cosi1 > 0) n = -n;
-		unsigned int numRays(10);
+		unsigned int numRays(1);
 		for (int c0(0); c0 < numRays; ++c0)
 		{
 			ray->depth += 1;
