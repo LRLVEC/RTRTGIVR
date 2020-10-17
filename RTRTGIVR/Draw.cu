@@ -16,7 +16,7 @@ extern "C" __global__ void __raygen__RayAllocator()
 	getCurandState(&state, statePtr);
 
 	RayData* rtData = (RayData*)optixGetSbtDataPointer();
-	RayTraceData answer = { {0.f,0.f,0.f},0 };
+	RayTraceData answer = { {0.f,0.f,0.f},0, {0.f, 0.f, 0.f}, {0.f, 0.f, 0.f} };
 
 	float2 ahh = /*random(index, paras.size, 0) +*/
 		make_float2(index) - make_float2(paras.size) / 2.0f +
@@ -36,6 +36,8 @@ extern "C" __global__ void __raygen__RayAllocator()
 		RayRadiance,        // missSBTIndex
 		pd0, pd1, state.d, state.v[0], state.v[1], state.v[2], state.v[3], state.v[4]);
 	paras.image[index.y * paras.size.x + index.x] = make_float4(answer.answer, 1.f);
+	paras.albedo[index.y * paras.size.x + index.x] = make_float4(answer.albedo, 0.f);
+	paras.normal[index.y * paras.size.x + index.x] = make_float4(answer.normal, 0.f);
 	setCurandState(statePtr, &state);
 }
 extern "C" __global__ void __closesthit__Ahh()
@@ -51,6 +53,15 @@ extern "C" __global__ void __closesthit__Ahh()
 		int primIdx = optixGetPrimitiveIndex();
 		float3 n = closeHitData->normals[primIdx];
 		float3 answer{ 0 };
+
+		float3 color{ 0.1f, 1.9f, 1.9f };
+
+		if (ray->depth == 0)
+		{
+			ray->albedo = color;
+			ray->normal = transposeMult(paras.trans->row0, paras.trans->row1, paras.trans->row2, n);
+		}
+
 		//if (rayData.depth > russian)
 		//{
 		//	if (random(seed) < 0.2f) { rayData.color = answer; return; }
@@ -71,7 +82,7 @@ extern "C" __global__ void __closesthit__Ahh()
 				RayCount,           // SBT stride
 				RayRadiance,        // missSBTIndex
 				pd0, pd1, state.d, state.v[0], state.v[1], state.v[2], state.v[3], state.v[4]);
-			answer += ray->answer * 0.8f;
+			answer += ray->answer * color;
 		}
 		ray->answer = answer / numRays;
 		setCurandStateToPayload(&state);
@@ -85,6 +96,11 @@ extern "C" __global__ void __miss__Ahh()
 	pd1 = optixGetPayload_1();
 	RayTraceData* ray((RayTraceData*)uP(pd0, pd1));
 	float3 dir(optixGetWorldRayDirection());
-	ray->answer = make_float3(texCubemap<float4>(paras.cubeTexture, dir.x, dir.y, dir.z));
+	float3 r(make_float3(texCubemap<float4>(paras.cubeTexture, dir.x, dir.y, dir.z)));
+	if (ray->depth == 0)
+	{
+		ray->albedo = r;
+	}
+	ray->answer = r;
 	ray->depth -= 1;
 }

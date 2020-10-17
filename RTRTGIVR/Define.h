@@ -10,7 +10,7 @@ struct TransInfo
 	float z0;
 };
 #else
-using TransInfo = CUDA::OptiX::Trans::TransInfo;
+using TransInfo = OpenGL::VR::OptiXTrans::TransInfo;
 #endif
 enum RayType
 {
@@ -25,6 +25,8 @@ struct RayTraceData
 {
 	float3 answer;
 	unsigned int depth;
+	float3 albedo;
+	float3 normal;
 };
 struct CloseHitData
 {
@@ -33,6 +35,8 @@ struct CloseHitData
 struct Parameters
 {
 	float4* image;
+	float4* albedo;
+	float4* normal;
 	OptixTraversableHandle handle;
 	TransInfo* trans;
 	uint2 size;

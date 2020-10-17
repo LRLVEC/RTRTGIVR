@@ -1,0 +1,7 @@
+Program:	Draw
+{
+	__raygen__RayAllocator
+	__closesthit__Radiance
+	__closesthit__Occlusion
+	__miss__Radiance
+}

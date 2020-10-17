@@ -38,6 +38,9 @@ namespace CUDA
 			Buffer hitDataBuffer;
 			OptixShaderBindingTable sbt;
 			Buffer frameBuffer;
+			Buffer frameAlbedoBuffer;
+			Buffer frameNormalBuffer;
+			Buffer finalFrameBuffer;
 			CUstream cuStream;
 			Parameters paras;
 			Buffer parasBuffer;
@@ -51,7 +54,7 @@ namespace CUDA
 			CubeMap sky;
 			TextureCube texCube;
 			OptixDenoiserOptions denoiserOptions;
-			//Denoiser denoiser;
+			Denoiser denoiser;
 
 			PathTracing(OpenGL::SourceManager* _sourceManager, OpenGL::OptiXRenderer* dr, OpenGL::FrameScale const& _size, void* transInfoDevice)
 				:
@@ -75,8 +78,11 @@ namespace CUDA
 				raygenDataBuffer(raygenData, false),
 				missDataBuffer(missData, false),
 				hitDataBuffer(hitData, false),
-				sbt(),
-				frameBuffer(*dr),
+				sbt({}),
+				frameBuffer(CUDA::Buffer::Device),
+				frameAlbedoBuffer(CUDA::Buffer::Device),
+				frameNormalBuffer(CUDA::Buffer::Device),
+				finalFrameBuffer(*dr),
 				parasBuffer(paras, false),
 				box(_sourceManager->folder.find("resources/box.stl").readSTL()),
 				vertices(Buffer::Device),
@@ -86,8 +92,8 @@ namespace CUDA
 				GASOutput(Buffer::Device),
 				sky("resources/skybox/"),
 				texCube({ 8, 8, 8, 8, cudaChannelFormatKindUnsigned },cudaFilterModePoint,cudaReadModeNormalizedFloat,true, sky),
-				denoiserOptions{ OPTIX_DENOISER_INPUT_RGB }
-				//denoiser(context, &denoiserOptions, OPTIX_DENOISER_MODEL_KIND_LDR, _size)
+				denoiserOptions{ OPTIX_DENOISER_INPUT_RGB },
+				denoiser(context, { OPTIX_DENOISER_INPUT_RGB_ALBEDO_NORMAL }, OPTIX_DENOISER_MODEL_KIND_HDR, _size)
 			{
 				box.getVerticesRepeated();
 				box.getNormals();
@@ -195,16 +201,28 @@ namespace CUDA
 			}
 			virtual void run()
 			{
-				frameBuffer.map();
 				optixLaunch(pip, cuStream, parasBuffer, sizeof(Parameters), &sbt, paras.size.x, paras.size.y, 1);
-				cudaDeviceSynchronize();
-				frameBuffer.unmap();
+				finalFrameBuffer.map();
+				//denoiser.run(cuStream);
+				finalFrameBuffer.unmap();
 			}
 			virtual void resize(OpenGL::FrameScale const& _size, GLuint _gl)
 			{
+				size_t frameSize(sizeof(float4) * _size.w * _size.h);
+				frameBuffer.resize(frameSize);
+				frameAlbedoBuffer.resize(frameSize);
+				frameNormalBuffer.resize(frameSize);
+				finalFrameBuffer.resize(_gl);
+				finalFrameBuffer.map();
+
+				denoiser.setup((float*)frameBuffer.device, (float*)frameAlbedoBuffer.device,
+					(float*)frameNormalBuffer.device, (float*)finalFrameBuffer.device, cuStream);
+
 				frameBuffer.resize(_gl);
 				frameBuffer.map();
-				paras.image = (float4*)frameBuffer.device;
+				paras.image = (float4*)finalFrameBuffer.device;
+				paras.albedo = (float4*)frameAlbedoBuffer.device;
+				paras.normal = (float4*)frameNormalBuffer.device;
 				paras.size = make_uint2(_size.w, _size.h);
 				parasBuffer.copy(paras);
 				frameBuffer.unmap();
