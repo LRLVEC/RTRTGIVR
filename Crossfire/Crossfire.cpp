@@ -219,8 +219,8 @@ namespace CUDA
 				cudaStreamCreate(&cuStream);
 				//denoiser.setup(cuStream);
 
-				float ahhh(1);
-				::printf("ahhh:%u\n", *(unsigned int*)&ahhh);
+				int ahhh(-1);
+				::printf("ahhh:%f\n", *(float*)&ahhh);
 
 			}
 			virtual void run()

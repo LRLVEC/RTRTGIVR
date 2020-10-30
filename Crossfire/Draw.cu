@@ -61,7 +61,7 @@ extern "C" __global__ void __raygen__RayAllocator()
 				float cosRight(dot(dirRight, answer.firstHitNorm));
 				if (cosRight * answer.firstHitAngle > 0)
 				{
-					if (!atomicCAS((unsigned int*)&paras.imageRight[idxRight.y * paras.size.x + idxRight.x].z, 0, 0))
+					if (!atomicCAS((unsigned int*)&paras.imageRight[idxRight.y * paras.size.x + idxRight.x].w, 0, 0))
 					{
 						pd0 = 0;
 						optixTrace(paras.handle, paras.trans->r0Right, dirRight,
@@ -70,11 +70,11 @@ extern "C" __global__ void __raygen__RayAllocator()
 							RayOcclusion, RayCount, RayOcclusion, pd0);
 						if (!pd0)
 						{
-							if (!atomicCAS((unsigned int*)&paras.imageRight[idxRight.y * paras.size.x + idxRight.x].z, 0, 1065353216))
+							if (!atomicCAS((unsigned int*)&paras.imageRight[idxRight.y * paras.size.x + idxRight.x].w, 0, 1065353216))
 							{
 								//to do:
 								//float coeff(answer.firstHitAngle * cosRight);
-								paras.imageRight[idxRight.y * paras.size.x + idxRight.x] = make_float4(answer.answer * abs(cosRight), 1.f);
+								paras.imageRight[idxRight.y * paras.size.x + idxRight.x] = make_float4(answer.answer, 1.f);
 								paras.albedoRight[idxRight.y * paras.size.x + idxRight.x] = make_float4(answer.albedo, 0.f);
 								paras.normalRight[idxRight.y * paras.size.x + idxRight.x] = make_float4(answer.normal, 0.f);
 							}

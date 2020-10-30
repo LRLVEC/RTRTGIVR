@@ -7,6 +7,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RTRTGIVR", "RTRTGIVR\RTRTGI
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Crossfire", "Crossfire\Crossfire.vcxproj", "{CA4AB333-669A-4EA4-A607-347A6CA9069E}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Final", "Final\Final.vcxproj", "{1C7BDC40-3A7E-499D-B451-F49DA58E24CD}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FinalRoom", "FinalRoom\FinalRoom.vcxproj", "{3D7A6C28-B06A-43A6-8C3B-3DF7E53366EC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +25,14 @@ Global
 		{CA4AB333-669A-4EA4-A607-347A6CA9069E}.Debug|x64.Build.0 = Debug|x64
 		{CA4AB333-669A-4EA4-A607-347A6CA9069E}.Release|x64.ActiveCfg = Release|x64
 		{CA4AB333-669A-4EA4-A607-347A6CA9069E}.Release|x64.Build.0 = Release|x64
+		{1C7BDC40-3A7E-499D-B451-F49DA58E24CD}.Debug|x64.ActiveCfg = Debug|x64
+		{1C7BDC40-3A7E-499D-B451-F49DA58E24CD}.Debug|x64.Build.0 = Debug|x64
+		{1C7BDC40-3A7E-499D-B451-F49DA58E24CD}.Release|x64.ActiveCfg = Release|x64
+		{1C7BDC40-3A7E-499D-B451-F49DA58E24CD}.Release|x64.Build.0 = Release|x64
+		{3D7A6C28-B06A-43A6-8C3B-3DF7E53366EC}.Debug|x64.ActiveCfg = Debug|x64
+		{3D7A6C28-B06A-43A6-8C3B-3DF7E53366EC}.Debug|x64.Build.0 = Debug|x64
+		{3D7A6C28-B06A-43A6-8C3B-3DF7E53366EC}.Release|x64.ActiveCfg = Release|x64
+		{3D7A6C28-B06A-43A6-8C3B-3DF7E53366EC}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

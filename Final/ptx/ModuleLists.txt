@@ -1,0 +1,10 @@
+Program:	Draw
+{
+	__raygen__RayAllocatorLeft
+	__raygen__RayAllocatorRight
+	__closesthit__RayRadianceLeft
+	__closesthit__RayRadianceRight
+	__closesthit__Shadow
+	__raygen__PhotonEmit
+	__closesthit__PhotonHit
+}
